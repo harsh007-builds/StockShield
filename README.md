@@ -2,7 +2,6 @@
 
 A production-ready web application for PCB manufacturing inventory management, automatic stock deduction on production, procurement trigger logic, and analytics.
 
-**Built for the hackathon by Electrolyte Solutions.**
 
 ---
 
