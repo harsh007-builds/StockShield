@@ -15,10 +15,15 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
+      console.log('Attempting login with:', username, password);
+      // console.log('API URL:', process.env.REACT_APP_API_URL); // Debugging
       await login(username, password);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed.');
+      console.error('Login Error Full:', err);
+      console.error('Response:', err.response);
+      console.error('Config:', err.config);
+      setError(err.response?.data?.error || `Login failed. ${err.message}`);
     } finally {
       setLoading(false);
     }
