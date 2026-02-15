@@ -27,12 +27,13 @@ app.use('/api/excel', require('./routes/excel'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // Serve React build in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'client', 'build', 'index.html'));
-  });
-}
+// Serve React build in production - SKIPPED FOR RENDER (Frontend is on Vercel)
+// if (process.env.NODE_ENV === 'production') {
+//   app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
+//   app.get('*', (req, res) => {
+//     res.sendFile(path.join(__dirname, '..', 'client', 'build', 'index.html'));
+//   });
+// }
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
