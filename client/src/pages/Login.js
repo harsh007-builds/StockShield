@@ -34,6 +34,9 @@ export default function Login() {
       <div className="login-card">
         <h1>StockShield</h1>
         <p>Inventory Automation & Consumption Analytics</p>
+        <p style={{ fontSize: '10px', color: '#666' }}>
+          API: {process.env.REACT_APP_API_URL || 'Using Localhost (Default)'}
+        </p>
         {error && <div className="error-msg">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
