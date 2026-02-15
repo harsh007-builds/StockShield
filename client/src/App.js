@@ -29,7 +29,7 @@ const icons = {
 
 function Layout({ children }) {
   const { user, logout } = useAuth();
-  const location = useLocation();
+
 
   const navItems = [
     { to: '/', label: 'Dashboard', icon: icons.dashboard },
