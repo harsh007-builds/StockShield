@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -55,16 +55,46 @@ export default function Dashboard() {
 
       <div className="charts-grid">
         <div className="card">
-          <h3 style={{marginBottom:16}}>Top Consumed Components</h3>
+          <h3 style={{ marginBottom: 20 }}>Top Consumed Components</h3>
           {topConsumed.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topConsumed}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="part_number" fontSize={11} angle={-30} textAnchor="end" height={60} />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="total_consumed" fill="#3b82f6" name="Total Consumed" />
-              </BarChart>
+              <AreaChart data={topConsumed}>
+                <defs>
+                  <linearGradient id="colorConsumed" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="part_number"
+                  fontSize={11}
+                  angle={-30}
+                  textAnchor="end"
+                  height={60}
+                  tick={{ fill: '#64748b' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b' }}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                  cursor={{ stroke: '#94a3b8', strokeWidth: 1 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="total_consumed"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorConsumed)"
+                  name="Total Consumed"
+                />
+              </AreaChart>
             </ResponsiveContainer>
           ) : (
             <div className="empty">No consumption data yet</div>
@@ -72,16 +102,43 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 style={{marginBottom:16}}>Daily Consumption</h3>
+          <h3 style={{ marginBottom: 20 }}>Daily Consumption</h3>
           {timeline.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={timeline}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" fontSize={11} />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="total_consumed" fill="#10b981" name="Units Consumed" />
-              </BarChart>
+              <AreaChart data={timeline}>
+                <defs>
+                  <linearGradient id="colorDaily" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="date"
+                  fontSize={11}
+                  tick={{ fill: '#64748b' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b' }}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                  cursor={{ stroke: '#94a3b8', strokeWidth: 1 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="total_consumed"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorDaily)"
+                  name="Units Consumed"
+                />
+              </AreaChart>
             </ResponsiveContainer>
           ) : (
             <div className="empty">No consumption data yet</div>
@@ -90,7 +147,7 @@ export default function Dashboard() {
       </div>
 
       <div className="card">
-        <h3 style={{marginBottom:16}}>Low Stock Components</h3>
+        <h3 style={{ marginBottom: 20 }}>Low Stock Components</h3>
         {lowStock.length > 0 ? (
           <div className="table-wrapper">
             <table>
@@ -101,16 +158,18 @@ export default function Dashboard() {
                   <th>Current Stock</th>
                   <th>Monthly Required</th>
                   <th>Threshold (20%)</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {lowStock.map((c) => (
                   <tr key={c.id}>
-                    <td>{c.component_name}</td>
+                    <td><span style={{ fontWeight: 600, color: 'var(--slate-800)' }}>{c.component_name}</span></td>
                     <td><code>{c.part_number}</code></td>
-                    <td style={{color:'#dc2626',fontWeight:600}}>{c.current_stock}</td>
+                    <td style={{ color: 'var(--red-500)', fontWeight: 700 }}>{c.current_stock}</td>
                     <td>{c.monthly_required_quantity}</td>
                     <td>{c.threshold}</td>
+                    <td><span className="badge badge-danger">LOW STOCK</span></td>
                   </tr>
                 ))}
               </tbody>

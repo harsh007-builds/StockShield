@@ -4,6 +4,14 @@ const path = require('path');
 const pool = require('../config/db');
 const { checkProcurementTrigger } = require('./componentController');
 
+const fs = require('fs');
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
 // Multer config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, '..', 'uploads')),
@@ -13,8 +21,8 @@ const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (ext === '.xlsx' || ext === '.xls') cb(null, true);
-    else cb(new Error('Only .xlsx and .xls files are allowed.'));
+    if (ext === '.xlsx' || ext === '.xls' || ext === '.xlsm') cb(null, true);
+    else cb(new Error('Only .xlsx, .xls, and .xlsm files are allowed.'));
   },
 });
 
@@ -84,7 +92,7 @@ exports.importInventory = async (req, res) => {
     res.json({ message: 'Import completed.', results });
   } catch (err) {
     console.error('Import error:', err);
-    res.status(500).json({ error: 'Error processing file.' });
+    res.status(500).json({ error: `Error processing file: ${err.message}` });
   }
 };
 
@@ -98,7 +106,7 @@ exports.exportInventory = async (req, res) => {
     );
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Invictus PCB System';
+    workbook.creator = 'StockShield';
     const ws = workbook.addWorksheet('Inventory');
 
     ws.columns = [

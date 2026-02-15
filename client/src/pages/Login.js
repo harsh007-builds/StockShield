@@ -27,7 +27,7 @@ export default function Login() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>Invictus PCB</h1>
+        <h1>StockShield</h1>
         <p>Inventory Automation & Consumption Analytics</p>
         {error && <div className="error-msg">{error}</div>}
         <form onSubmit={handleSubmit}>

@@ -81,14 +81,14 @@ export default function Components() {
       </div>
 
       <div className="card">
-        <div className="toolbar" style={{ marginBottom: 16 }}>
+        <div className="toolbar" style={{ marginBottom: 20 }}>
           <input
             className="search-input"
             placeholder="Search by name or part number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
+          <label className="flex" style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>
             <input type="checkbox" checked={showLow} onChange={(e) => setShowLow(e.target.checked)} />
             Low Stock Only
           </label>
@@ -108,15 +108,21 @@ export default function Components() {
                   <th>Current Stock</th>
                   <th>Monthly Required</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {components.map((c) => (
                   <tr key={c.id}>
-                    <td>{c.component_name}</td>
-                    <td><code>{c.part_number}</code></td>
-                    <td>{c.current_stock}</td>
+                    <td><span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{c.component_name}</span></td>
+                    <td><code style={{ background: 'var(--slate-100)', padding: '2px 6px', borderRadius: '4px', color: 'var(--slate-600)', fontSize: '12px' }}>{c.part_number}</code></td>
+                    <td>
+                      {c.is_low_stock ? (
+                        <span style={{ color: 'var(--danger)', fontWeight: 700 }}>{c.current_stock}</span>
+                      ) : (
+                        <span style={{ color: 'var(--text-main)' }}>{c.current_stock}</span>
+                      )}
+                    </td>
                     <td>{c.monthly_required_quantity}</td>
                     <td>
                       {c.is_low_stock ? (
@@ -125,9 +131,9 @@ export default function Components() {
                         <span className="badge badge-success">OK</span>
                       )}
                     </td>
-                    <td>
-                      <button className="btn btn-outline btn-sm" onClick={() => openEdit(c)}>Edit</button>{' '}
-                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(c.id)}>Delete</button>
+                    <td className="text-right">
+                      <button className="btn btn-outline btn-sm" onClick={() => openEdit(c)}>Edit</button>
+                      <button className="btn btn-danger btn-sm" style={{ marginLeft: 8 }} onClick={() => handleDelete(c.id)}>Delete</button>
                     </td>
                   </tr>
                 ))}

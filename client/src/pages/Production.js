@@ -10,6 +10,7 @@ export default function Production() {
   const [insufficientDetails, setInsufficientDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [consumptionModal, setConsumptionModal] = useState(null);
+  const [substitutions, setSubstitutions] = useState({});
 
   useEffect(() => {
     api.get('/pcbs').then((res) => setPcbs(res.data));
@@ -32,9 +33,11 @@ export default function Production() {
       const res = await api.post('/production', {
         pcb_id: parseInt(form.pcb_id),
         quantity_produced: parseInt(form.quantity_produced),
+        substitutions,
       });
       setSuccess(`Production successful! Entry #${res.data.production_entry.id} created. ${res.data.consumption.length} components consumed.`);
       setForm({ pcb_id: '', quantity_produced: 1 });
+      setSubstitutions({});
       fetchHistory();
     } catch (err) {
       const data = err.response?.data;
@@ -58,6 +61,13 @@ export default function Production() {
     }
   };
 
+  const toggleSubstitution = (componentId, useAlt) => {
+    setSubstitutions(prev => ({
+      ...prev,
+      [componentId]: useAlt
+    }));
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -71,6 +81,10 @@ export default function Production() {
 
         {insufficientDetails && (
           <div style={{ marginBottom: 16 }}>
+            <div className="alert alert-danger">
+              <strong>Insufficient Stock!</strong> Some components are missing.
+              {insufficientDetails.some(c => c.alternative) && " You can select approved alternatives below."}
+            </div>
             <div className="table-wrapper">
               <table>
                 <thead>
@@ -80,6 +94,7 @@ export default function Production() {
                     <th>Available</th>
                     <th>Required</th>
                     <th>Shortfall</th>
+                    <th>Suggestion</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -89,12 +104,42 @@ export default function Production() {
                       <td><code>{c.part_number}</code></td>
                       <td>{c.current_stock}</td>
                       <td>{c.required}</td>
-                      <td style={{color:'#dc2626',fontWeight:600}}>{c.shortfall}</td>
+                      <td style={{ color: '#dc2626', fontWeight: 600 }}>{c.shortfall}</td>
+                      <td>
+                        {c.alternative ? (
+                          <div style={{ border: '1px solid #e5e7eb', padding: 8, borderRadius: 4, background: '#f9fafb' }}>
+                            <div style={{ fontWeight: 600, marginBottom: 4 }}>{c.alternative.component_name}</div>
+                            <div style={{ fontSize: '0.9em', marginBottom: 4 }}>
+                              Stock: <span className={c.alternative.current_stock >= c.required ? 'text-success' : 'text-danger'}>
+                                {c.alternative.current_stock}
+                              </span>
+                            </div>
+                            {c.alternative.current_stock >= c.required ? (
+                              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginTop: 4 }}>
+                                <input type="checkbox"
+                                  checked={!!substitutions[c.component_id]}
+                                  onChange={(e) => toggleSubstitution(c.component_id, e.target.checked)}
+                                />
+                                <span style={{ fontSize: '0.9em' }}>Use Alternative</span>
+                              </label>
+                            ) : (
+                              <span style={{ fontSize: '0.85em', color: '#999' }}>Alt also insufficient</span>
+                            )}
+                          </div>
+                        ) : <span className="text-muted">—</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            {Object.values(substitutions).some(Boolean) && (
+              <div style={{ marginTop: 8, textAlign: 'right' }}>
+                <button className="btn btn-primary" onClick={handleProduce}>
+                  Retry with Substitutions
+                </button>
+              </div>
+            )}
           </div>
         )}
 

@@ -4,7 +4,7 @@ const { checkProcurementTrigger } = require('./componentController');
 exports.produce = async (req, res) => {
   const client = await pool.connect();
   try {
-    const { pcb_id, quantity_produced } = req.body;
+    const { pcb_id, quantity_produced, substitutions = {} } = req.body;
     if (!pcb_id || !quantity_produced || quantity_produced <= 0) {
       return res.status(400).json({ error: 'pcb_id and a positive quantity_produced are required.' });
     }
@@ -13,9 +13,12 @@ exports.produce = async (req, res) => {
 
     // Get all components for this PCB
     const mappings = await client.query(
-      `SELECT pc.component_id, pc.quantity_per_pcb, c.component_name, c.part_number, c.current_stock
+      `SELECT pc.component_id, pc.quantity_per_pcb, pc.alternative_component_id,
+              c.component_name, c.part_number, c.current_stock,
+              ac.component_name as alt_component_name, ac.part_number as alt_part_number, ac.current_stock as alt_current_stock
        FROM pcb_components pc
        JOIN components c ON c.id = pc.component_id
+       LEFT JOIN components ac ON ac.id = pc.alternative_component_id
        WHERE pc.pcb_id = $1`,
       [pcb_id]
     );
@@ -25,17 +28,53 @@ exports.produce = async (req, res) => {
       return res.status(400).json({ error: 'No components mapped to this PCB.' });
     }
 
-    // Check stock sufficiency for ALL components first
+    // Check stock sufficiency for ALL components
     const insufficientStock = [];
+    const componentsToConsume = [];
+
     for (const mapping of mappings.rows) {
       const required = mapping.quantity_per_pcb * quantity_produced;
-      if (mapping.current_stock < required) {
-        insufficientStock.push({
-          component_name: mapping.component_name,
-          part_number: mapping.part_number,
-          current_stock: mapping.current_stock,
+      let targetComponentId = mapping.component_id;
+      let targetStock = mapping.current_stock;
+      let targetName = mapping.component_name;
+      let targetPart = mapping.part_number;
+
+      // Check if substitution is requested and valid
+      if (substitutions[mapping.component_id] && mapping.alternative_component_id) {
+        // Use alternative
+        targetComponentId = mapping.alternative_component_id;
+        targetStock = mapping.alt_current_stock;
+        targetName = mapping.alt_component_name;
+        targetPart = mapping.alt_part_number;
+      }
+
+      if (targetStock < required) {
+        const errorDetail = {
+          component_id: mapping.component_id,
+          component_name: targetName,
+          part_number: targetPart,
+          current_stock: targetStock,
           required: required,
-          shortfall: required - mapping.current_stock,
+          shortfall: required - targetStock,
+        };
+
+        // If we were trying to use primary, and an alternative exists, include it in suggestion
+        if (targetComponentId === mapping.component_id && mapping.alternative_component_id) {
+          errorDetail.alternative = {
+            component_id: mapping.alternative_component_id,
+            component_name: mapping.alt_component_name,
+            part_number: mapping.alt_part_number,
+            current_stock: mapping.alt_current_stock,
+          };
+        }
+
+        insufficientStock.push(errorDetail);
+      } else {
+        componentsToConsume.push({
+          component_id: targetComponentId,
+          quantity: required,
+          stock_before: targetStock,
+          stock_after: targetStock - required
         });
       }
     }
@@ -43,7 +82,7 @@ exports.produce = async (req, res) => {
     if (insufficientStock.length > 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({
-        error: 'Insufficient stock for production.',
+        error: 'Insufficient stock.',
         insufficient_components: insufficientStock,
       });
     }
@@ -58,15 +97,11 @@ exports.produce = async (req, res) => {
 
     // Deduct stock and record consumption
     const consumptionRecords = [];
-    for (const mapping of mappings.rows) {
-      const quantityConsumed = mapping.quantity_per_pcb * quantity_produced;
-      const stockBefore = mapping.current_stock;
-      const stockAfter = stockBefore - quantityConsumed;
-
-      // Deduct stock (CHECK constraint prevents negative)
+    for (const item of componentsToConsume) {
+      // Deduct stock
       await client.query(
         'UPDATE components SET current_stock = $1, updated_at = NOW() WHERE id = $2',
-        [stockAfter, mapping.component_id]
+        [item.stock_after, item.component_id]
       );
 
       // Record consumption
@@ -74,7 +109,7 @@ exports.produce = async (req, res) => {
         `INSERT INTO consumption_history 
          (production_entry_id, component_id, quantity_consumed, stock_before, stock_after)
          VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [productionEntryId, mapping.component_id, quantityConsumed, stockBefore, stockAfter]
+        [productionEntryId, item.component_id, item.quantity, item.stock_before, item.stock_after]
       );
 
       consumptionRecords.push(consumption.rows[0]);
@@ -82,10 +117,10 @@ exports.produce = async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Check procurement triggers after commit (non-blocking)
-    for (const mapping of mappings.rows) {
+    // Check procurement triggers (non-blocking)
+    for (const item of componentsToConsume) {
       try {
-        await checkProcurementTrigger(mapping.component_id);
+        await checkProcurementTrigger(item.component_id);
       } catch (e) {
         console.error('Procurement trigger check error:', e);
       }

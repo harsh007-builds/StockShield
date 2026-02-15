@@ -9,7 +9,7 @@ export default function PCBs() {
   const [form, setForm] = useState({ pcb_name: '', pcb_code: '', description: '' });
   const [editId, setEditId] = useState(null);
   const [selectedPcb, setSelectedPcb] = useState(null);
-  const [mapForm, setMapForm] = useState({ component_id: '', quantity_per_pcb: 1 });
+  const [mapForm, setMapForm] = useState({ component_id: '', quantity_per_pcb: 1, alternative_component_id: '' });
   const [error, setError] = useState('');
 
   const fetchPcbs = useCallback(async () => {
@@ -53,7 +53,7 @@ export default function PCBs() {
     try {
       const res = await api.get(`/pcbs/${p.id}`);
       setSelectedPcb(res.data);
-      setMapForm({ component_id: '', quantity_per_pcb: 1 });
+      setMapForm({ component_id: '', quantity_per_pcb: 1, alternative_component_id: '' });
       setError('');
       setModal('map');
     } catch (err) {
@@ -94,10 +94,11 @@ export default function PCBs() {
       await api.post(`/pcbs/${selectedPcb.id}/components`, {
         component_id: parseInt(mapForm.component_id),
         quantity_per_pcb: parseInt(mapForm.quantity_per_pcb),
+        alternative_component_id: mapForm.alternative_component_id ? parseInt(mapForm.alternative_component_id) : null,
       });
       const res = await api.get(`/pcbs/${selectedPcb.id}`);
       setSelectedPcb(res.data);
-      setMapForm({ component_id: '', quantity_per_pcb: 1 });
+      setMapForm({ component_id: '', quantity_per_pcb: 1, alternative_component_id: '' });
     } catch (err) {
       setError(err.response?.data?.error || 'Error adding mapping.');
     }
@@ -195,16 +196,25 @@ export default function PCBs() {
             <h2>Components for: {selectedPcb.pcb_name}</h2>
             {error && <div className="error-msg">{error}</div>}
 
-            <form onSubmit={handleAddMapping} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <form onSubmit={handleAddMapping} style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
               <select className="form-control" value={mapForm.component_id}
-                onChange={(e) => setMapForm({ ...mapForm, component_id: e.target.value })} required style={{ flex: 2 }}>
+                onChange={(e) => setMapForm({ ...mapForm, component_id: e.target.value })} required style={{ flex: 2, minWidth: 200 }}>
                 <option value="">Select component...</option>
                 {components.map((c) => (
                   <option key={c.id} value={c.id}>{c.component_name} ({c.part_number})</option>
                 ))}
               </select>
               <input className="form-control" type="number" min="1" placeholder="Qty" value={mapForm.quantity_per_pcb}
-                onChange={(e) => setMapForm({ ...mapForm, quantity_per_pcb: e.target.value })} required style={{ flex: 1 }} />
+                onChange={(e) => setMapForm({ ...mapForm, quantity_per_pcb: e.target.value })} required style={{ flex: 1, minWidth: 80 }} />
+
+              <select className="form-control" value={mapForm.alternative_component_id}
+                onChange={(e) => setMapForm({ ...mapForm, alternative_component_id: e.target.value })} style={{ flex: 2, minWidth: 200 }}>
+                <option value="">(Optional) Alternative Part...</option>
+                {components.filter(c => c.id !== parseInt(mapForm.component_id)).map((c) => (
+                  <option key={c.id} value={c.id}>{c.component_name} ({c.part_number})</option>
+                ))}
+              </select>
+
               <button className="btn btn-success" type="submit">Add</button>
             </form>
 
@@ -216,6 +226,7 @@ export default function PCBs() {
                       <th>Component</th>
                       <th>Part Number</th>
                       <th>Qty / PCB</th>
+                      <th>Alternative</th>
                       <th>Stock</th>
                       <th></th>
                     </tr>
@@ -226,6 +237,11 @@ export default function PCBs() {
                         <td>{c.component_name}</td>
                         <td><code>{c.part_number}</code></td>
                         <td>{c.quantity_per_pcb}</td>
+                        <td>
+                          {c.alt_component_id ? (
+                            <span>{c.alt_component_name} <br /><small>({c.alt_part_number})</small></span>
+                          ) : <span className="text-muted">—</span>}
+                        </td>
                         <td>{c.current_stock}</td>
                         <td>
                           <button className="btn btn-danger btn-sm" onClick={() => handleRemoveMapping(c.mapping_id)}>Remove</button>

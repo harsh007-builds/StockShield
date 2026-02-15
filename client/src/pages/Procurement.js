@@ -4,6 +4,8 @@ import api from '../api';
 export default function Procurement() {
   const [triggers, setTriggers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [resolveModal, setResolveModal] = useState(null); // { id, component_name }
+  const [resolveForm, setResolveForm] = useState({ quantity_received: '', po_reference: '' });
 
   useEffect(() => { fetchTriggers(); }, []);
 
@@ -19,9 +21,25 @@ export default function Procurement() {
     }
   };
 
-  const resolve = async (id) => {
+  const openResolveModal = (trigger) => {
+    setResolveModal(trigger);
+    setResolveForm({ quantity_received: '', po_reference: '' });
+  };
+
+  const closeResolveModal = () => {
+    setResolveModal(null);
+  };
+
+  const handleResolveSubmit = async (e) => {
+    e.preventDefault();
+    if (!resolveModal) return;
+
     try {
-      await api.put(`/procurement/${id}/resolve`);
+      await api.put(`/procurement/${resolveModal.id}/resolve`, {
+        quantity_received: parseInt(resolveForm.quantity_received),
+        po_reference: resolveForm.po_reference,
+      });
+      setResolveModal(null);
       fetchTriggers();
     } catch (err) {
       alert(err.response?.data?.error || 'Error resolving trigger.');
@@ -70,7 +88,7 @@ export default function Procurement() {
                     <td>{new Date(t.created_at).toLocaleString()}</td>
                     <td>
                       {t.status === 'PENDING' && (
-                        <button className="btn btn-success btn-sm" onClick={() => resolve(t.id)}>
+                        <button className="btn btn-success btn-sm" onClick={() => openResolveModal(t)}>
                           Resolve
                         </button>
                       )}
@@ -82,6 +100,44 @@ export default function Procurement() {
           </div>
         )}
       </div>
+
+      {resolveModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Resolve Procurement: {resolveModal.component_name}</h3>
+            <form onSubmit={handleResolveSubmit}>
+              <div className="form-group">
+                <label>Quantity Received (Units)</label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={resolveForm.quantity_received}
+                  onChange={(e) => setResolveForm({ ...resolveForm, quantity_received: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Purchase Order (PO) Number</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. PO-2023-001"
+                  value={resolveForm.po_reference}
+                  onChange={(e) => setResolveForm({ ...resolveForm, po_reference: e.target.value })}
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={closeResolveModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Confirm & Update Stock
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

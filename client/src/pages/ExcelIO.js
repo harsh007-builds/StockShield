@@ -58,7 +58,7 @@ export default function ExcelIO() {
       <div className="card">
         <h3 style={{ marginBottom: 16 }}>Import Inventory from Excel</h3>
         <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>
-          Upload an .xlsx file with columns: <strong>Component Name</strong>, <strong>Part Number</strong>, <strong>Current Stock</strong>, <strong>Monthly Required Quantity</strong>. 
+          Upload an .xlsx or .xlsm file with columns: <strong>Component Name</strong>, <strong>Part Number</strong>, <strong>Current Stock</strong>, <strong>Monthly Required Quantity</strong>.
           The first row should be the header. Existing components (matched by part number) will be updated.
         </p>
         {error && <div className="error-msg">{error}</div>}
@@ -73,7 +73,7 @@ export default function ExcelIO() {
           </div>
         )}
         <form onSubmit={handleImport} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <input type="file" accept=".xlsx,.xls" onChange={(e) => setFile(e.target.files[0])} required />
+          <input type="file" accept=".xlsx,.xls,.xlsm" onChange={(e) => setFile(e.target.files[0])} required />
           <button className="btn btn-primary" type="submit" disabled={uploading}>
             {uploading ? 'Importing...' : 'Import'}
           </button>

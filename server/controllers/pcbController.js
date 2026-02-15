@@ -19,9 +19,12 @@ exports.getById = async (req, res) => {
 
     const components = await pool.query(
       `SELECT pc.id as mapping_id, pc.quantity_per_pcb,
-              c.id as component_id, c.component_name, c.part_number, c.current_stock
+              c.id as component_id, c.component_name, c.part_number, c.current_stock,
+              ac.id as alt_component_id, ac.component_name as alt_component_name, 
+              ac.part_number as alt_part_number, ac.current_stock as alt_current_stock
        FROM pcb_components pc
        JOIN components c ON c.id = pc.component_id
+       LEFT JOIN components ac ON ac.id = pc.alternative_component_id
        WHERE pc.pcb_id = $1
        ORDER BY c.component_name`,
       [req.params.id]
@@ -94,15 +97,15 @@ exports.remove = async (req, res) => {
 // ---- Component Mapping ----
 exports.addComponent = async (req, res) => {
   try {
-    const { component_id, quantity_per_pcb } = req.body;
+    const { component_id, quantity_per_pcb, alternative_component_id } = req.body;
     if (!component_id || !quantity_per_pcb) {
       return res.status(400).json({ error: 'component_id and quantity_per_pcb are required.' });
     }
 
     const result = await pool.query(
-      `INSERT INTO pcb_components (pcb_id, component_id, quantity_per_pcb)
-       VALUES ($1, $2, $3) RETURNING *`,
-      [req.params.id, component_id, quantity_per_pcb]
+      `INSERT INTO pcb_components (pcb_id, component_id, quantity_per_pcb, alternative_component_id)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [req.params.id, component_id, quantity_per_pcb, alternative_component_id || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {

@@ -67,6 +67,7 @@ async function initDB() {
       id SERIAL PRIMARY KEY,
       pcb_id INTEGER NOT NULL REFERENCES pcbs(id) ON DELETE CASCADE,
       component_id INTEGER NOT NULL REFERENCES components(id) ON DELETE CASCADE,
+      alternative_component_id INTEGER REFERENCES components(id) ON DELETE SET NULL,
       quantity_per_pcb INTEGER NOT NULL CHECK (quantity_per_pcb > 0),
       UNIQUE(pcb_id, component_id)
     );
@@ -96,6 +97,9 @@ async function initDB() {
       monthly_required_quantity INTEGER NOT NULL,
       threshold INTEGER NOT NULL,
       status VARCHAR(20) DEFAULT 'PENDING',
+      stock_at_resolution INTEGER,
+      po_reference VARCHAR(100),
+      resolved_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `;
