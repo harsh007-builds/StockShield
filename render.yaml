@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: stockshield-server
+    env: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && node db-init.js && node index.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stockshield-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: stockshield-db
+    plan: free
+    databaseName: stockshield
+    user: stockshield_user

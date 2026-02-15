@@ -4,36 +4,47 @@ const { Pool } = require('pg');
 const ADMIN_PASSWORD = 'admin123';
 
 async function initDB() {
-  // Connect without database to create it if needed
-  const rootPool = new Pool({
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT, 10),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: 'postgres',
-  });
+  const isProduction = process.env.NODE_ENV === 'production';
+  const connectionString = process.env.DATABASE_URL;
 
-  try {
-    const dbCheck = await rootPool.query(
-      "SELECT 1 FROM pg_database WHERE datname = $1", [process.env.DB_NAME]
-    );
-    if (dbCheck.rows.length === 0) {
-      await rootPool.query(`CREATE DATABASE ${process.env.DB_NAME}`);
-      console.log(`Database "${process.env.DB_NAME}" created.`);
-    } else {
-      console.log(`Database "${process.env.DB_NAME}" already exists.`);
+  // Only attempt to create the database if NOT in production (local dev)
+  if (!isProduction && !connectionString) {
+    const rootPool = new Pool({
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT, 10),
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: 'postgres',
+    });
+
+    try {
+      const dbCheck = await rootPool.query(
+        "SELECT 1 FROM pg_database WHERE datname = $1", [process.env.DB_NAME]
+      );
+      if (dbCheck.rows.length === 0) {
+        await rootPool.query(`CREATE DATABASE ${process.env.DB_NAME}`);
+        console.log(`Database "${process.env.DB_NAME}" created.`);
+      } else {
+        console.log(`Database "${process.env.DB_NAME}" already exists.`);
+      }
+    } catch (err) {
+      console.warn("Formatting warning: Could not check/create database. Assuming it exists or user has no permissions.", err.message);
+    } finally {
+      await rootPool.end();
     }
-  } finally {
-    await rootPool.end();
   }
 
   // Connect to the app database
   const pool = new Pool({
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT, 10),
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
+    connectionString: isProduction ? connectionString : undefined,
+    ...(!isProduction && {
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT, 10),
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+    }),
+    ssl: isProduction ? { rejectUnauthorized: false } : false,
   });
 
   const schema = `
