@@ -7,8 +7,12 @@ const app = express();
 
 // Middleware
 // Middleware
+app.use((req, res, next) => {
+  console.log(`[REQUEST] ${req.method} ${req.path}`);
+  next();
+});
 app.use(cors({
-  origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:5000', 'https://stock-shield.vercel.app'], // Add your Vercel URL here just in case
+  origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:5000', 'https://stock-shield.vercel.app'],
   credentials: true
 }));
 app.use(express.json());
