@@ -12,7 +12,25 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors({
-  origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:5000', 'https://stock-shield.vercel.app'],
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'http://localhost:3000',
+      'http://localhost:5000',
+      'https://stock-shield.vercel.app'
+    ];
+
+    // Allow requests with no origin (like mobile apps or curl calls)
+    if (!origin) return callback(null, true);
+
+    // Check strict match or Vercel preview URL regex
+    if (allowedOrigins.includes(origin) || /https:\/\/stock-shield.*\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    console.log('[CORS] Blocked origin:', origin);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json());
